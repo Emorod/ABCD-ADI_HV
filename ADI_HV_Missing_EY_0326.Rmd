@@ -48,6 +48,7 @@ data_2_14<- read.csv("data_2_14.csv") # full dataset including missing N = 11876
 
 demo race 
 ```{r}
+# set working directory 
 demo<-read.csv("ABCD Baseline data.csv")
 
 colnames(demo)
