@@ -36,10 +36,11 @@ pacman::p_load(
 
 Load dataset
 ```{r}
-setwd("C:/Users/qyuan25/OneDrive - Emory University/Shared Documents - SOM Ku Lab/General/ABCD Data/ADI, HV, and Positive Family and School Environment")
-ADI_HV <- read.csv("C:/Users/qyuan25/OneDrive - Emory University/Shared Documents - SOM Ku Lab/General/ABCD Data/ADI, HV, and Positive Family and School Environment/data_11_20.csv") # N = 10114
+### Set your working directory here ###
+setwd("")
+ADI_HV <- read.csv("data_11_20.csv") # N = 10114
 
-data_2_14<- read.csv("C:/Users/qyuan25/OneDrive - Emory University/Shared Documents - SOM Ku Lab/General/ABCD Data/ADI, HV, and Positive Family and School Environment/data_2_14.csv") # full dataset including missing N = 11876
+data_2_14<- read.csv("data_2_14.csv") # full dataset including missing N = 11876
 
 ```
 
@@ -47,7 +48,7 @@ data_2_14<- read.csv("C:/Users/qyuan25/OneDrive - Emory University/Shared Docume
 
 demo race 
 ```{r}
-demo<-read.csv("C:/Users/qyuan25/OneDrive - Emory University/Shared Documents - SOM Ku Lab/General/ABCD Data/ADI, HV, and Positive Family and School Environment/raw data/ABCD Baseline data.csv")
+demo<-read.csv("ABCD Baseline data.csv")
 
 colnames(demo)
 
