@@ -13,7 +13,7 @@ This repository contains the code and analysis for the ADI HV project. The main 
 
 - **ADI_HV_regression_EY_0326.Rmd**: Contains the linear mixed regression model analysis. It investigates the relationships between the dependent variable and independent variables while accounting for random effects. The file also includes interaction analysis to examine potential moderating effects of school and family environment.
 
-- **ADI_HV_sensitivity_analysis.R**: Focuses on sensitivity analysis for imaging data quality control. It explores the analysis on only a subset of participants, assessing the robustness of our findings.
+- **ADI_HV_Sensitivity.R**: Focuses on sensitivity analysis for imaging data quality control. It explores the analysis on only a subset of participants, assessing the robustness of our findings.
 
 ## Usage
 
