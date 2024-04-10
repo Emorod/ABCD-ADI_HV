@@ -30,10 +30,10 @@ library(boot)
 
 # Load dataset
 ```{r}
-setwd("C:/Users/qyuan25/OneDrive - Emory University/Shared Documents - SOM Ku Lab/General/ABCD Data/ADI, HV, and Positive Family and School Environment")
-ADI_HV <- read.csv("C:/Users/qyuan25/OneDrive - Emory University/Shared Documents - SOM Ku Lab/General/ABCD Data/ADI, HV, and Positive Family and School Environment/data_11_20.csv") # N = 10114
+### Setting Working Directory Here ###
+ADI_HV <- read.csv("data_11_20.csv") # N = 10114
 
-data_2_14<- read.csv("C:/Users/qyuan25/OneDrive - Emory University/Shared Documents - SOM Ku Lab/General/ABCD Data/ADI, HV, and Positive Family and School Environment/data_2_14.csv") # full dataset including missing N = 11876
+data_2_14<- read.csv("data_2_14.csv") # full dataset including missing N = 11876
 
 ```
 
