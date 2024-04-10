@@ -37,9 +37,10 @@ pacman::p_load(
 
 Load dataset
 ```{r}
-setwd("C:/Users/qyuan25/OneDrive - Emory University/Shared Documents - SOM Ku Lab/General/ABCD Data/ADI, HV, and Positive Family and School Environment")
+# Set Working Directory Here: 
+# setwd(" ")
 
-ADI_HV <- read.csv("C:/Users/qyuan25/OneDrive - Emory University/Shared Documents - SOM Ku Lab/General/ABCD Data/ADI, HV, and Positive Family and School Environment/data_11_20.csv") # N = 10114
+ADI_HV <- read.csv("data_11_20.csv") # N = 10114
 data<-ADI_HV
 ```
 
