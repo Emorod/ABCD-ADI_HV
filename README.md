@@ -5,13 +5,13 @@ This repository contains the code and analysis for the ADI HV project. The main 
 ## Contents
 
 - **data_11_20.csv**: This is the csv file for the included participants for all main analysis (N = 10114)
-- **data_2_14.csv**: This is the csv file for all participants (including those that have missing data (N=11876) 
+- **data_2_14_2.csv**: This is the csv file for all participants (including those that have missing data (N=11876) 
 
 - **ADI_HV_Plots_EY.Rmd**: This R Markdown file includes code for generating distributions and pairwise plots of the data. These visualizations serve as a preliminary step before conducting linear mixed modeling to understand the relationships between variables and check for any potential issues or patterns.
 
 - **ADI_HV_Missing_EY_0326.Rmd**: In this R Markdown file, we compare the excluded and included data to assess any differences or biases. We also check for missing values and handle them appropriately.
 
-- - **ADI_HV_regression_EY_0326.Rmd**: Contains the linear mixed regression model analysis. It investigates the relationships between the dependent variable and independent variables while accounting for random effects. The file also includes interaction analysis to examine potential moderating effects of school and family environment.
+- **ADI_HV_regression_EY_0326.Rmd**: Contains the linear mixed regression model analysis. It investigates the relationships between the dependent variable and independent variables while accounting for random effects. The file also includes interaction analysis to examine potential moderating effects of school and family environment.
 
 - **ADI_HV_sensitivity_analysis.R**: Focuses on sensitivity analysis for imaging data quality control. It explores the analysis on only a subset of participants, assessing the robustness of our findings.
 
