@@ -23,17 +23,17 @@ To reproduce the analysis, follow these steps:
 2. Open the desired R Markdown file (.Rmd) in RStudio or your preferred IDE.
 3. Ensure that the necessary dependencies and datasets are available.
 4. Run the code chunks in the R Markdown file to generate the analysis output, including plots, tables, and model results.
-5. Review the generated output and interpret the findings.
 
 ## Dependencies
 
 The analysis relies on the following R packages:
 
 - `tidyverse` for data manipulation and visualization
-- `lme4` for linear mixed modeling
-- `ggplot2` for creating plots
+- `lme4` and `lmerTest` for linear mixed modeling
+- `ggplot2` and `GGally` for creating plots
 - `knitr` for generating reports
-- 
+- `dplyr` for data manipulation and filtering
+- `interactions` for interaction analysis
 
 Please ensure that these packages are installed before running the analysis.
 
