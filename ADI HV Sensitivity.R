@@ -25,7 +25,7 @@ library(writexl)
 
 
 #setting wd
-setwd("C:/Users/qyuan25/OneDrive - Emory University/Shared Documents - SOM Ku Lab/General/ABCD Data/ADI, HV, and Positive Family and School Environment")
+#setwd("")
 
 
 #import dataset
