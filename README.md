@@ -21,8 +21,9 @@ To reproduce the analysis, follow these steps:
 
 1. Clone the repository to your local machine.
 2. Open the desired R Markdown file (.Rmd) in RStudio or your preferred IDE.
-3. Ensure that the necessary dependencies and datasets are available.
-4. Run the code chunks in the R Markdown file to generate the analysis output, including plots, tables, and model results.
+3. Unzip the data files and store them in preferred working directory.
+4. Ensure that the necessary dependencies and datasets are available.
+5. Run the code chunks in the R Markdown file to generate the analysis output, including plots, tables, and model results.
 
 ## Dependencies
 
