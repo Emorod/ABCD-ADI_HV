@@ -1,0 +1,369 @@
+---
+title: "ADI HV Plots"
+author: "Emerald Yuan"
+date: "2024-03-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+install packages
+```{r}
+
+library(ggplot2)
+library(GGally)
+```
+
+
+```{r}
+pacman::p_load(
+  dplyr,
+  rio,
+  lme4,
+  lmerTest,
+  car,
+  mediation,
+  lmtest,
+  lattice,
+  irr,
+  parameters,
+  ggplot2,
+  cowplot,
+  finalfit,
+  GGally)
+```
+
+
+Load dataset
+```{r}
+setwd("C:/Users/qyuan25/OneDrive - Emory University/Shared Documents - SOM Ku Lab/General/ABCD Data/ADI, HV, and Positive Family and School Environment")
+
+ADI_HV <- read.csv("C:/Users/qyuan25/OneDrive - Emory University/Shared Documents - SOM Ku Lab/General/ABCD Data/ADI, HV, and Positive Family and School Environment/data_11_20.csv") # N = 10114
+data<-ADI_HV
+```
+
+# Rename Variables for Plots
+```{r pressure, echo=FALSE}
+
+# rename
+sub <- data %>%
+  rename(
+    #demo
+    age = age,
+    combined_income = demo_comb_income_v2,
+    # Moderators
+    Positive_Family_Environment = crpbi_y_ss_parent,
+    Positive_School_Environment = srpf_y_ss_ses,
+    # ADI
+    Percentage_HS_Diploma = reshist_addr1_adi_edu_h,
+    Avg_Household_Income = reshist_addr1_adi_income,
+    Income_Disparity = reshist_addr1_adi_in_dis,
+    Percentage_Home_Owner = reshist_addr1_adi_home_o,
+    Percentage_Unemployed = reshist_addr1_adi_unemp,
+    Percentage_Below_Poverty = reshist_addr1_adi_pov,
+    Percentage_Below_138_Poverty = reshist_addr1_adi_b138,
+    Percentage_Single_Parents = reshist_addr1_adi_sp,
+    Percentage_No_Car = reshist_addr1_adi_ncar,
+    Population_Density = reshist_addr1_popdensity,
+    # BOI
+    Right_Hippocampal_Volume=rh,
+    Left_Hippocampal_Volume=lh,
+    Intracranial_Volume = icv,
+  )
+
+sub1<-sub%>%
+  mutate(p_high_school=ifelse(p_edu_highest>=13,1,0)) # at least high school graduate
+
+```
+# Check Numeric and Factors
+```{r}
+is.numeric(sub1$age)
+is.factor(sub1$sex)
+is.factor(sub1$White_non_Hispanic)
+is.factor(sub1$p_high_school)
+is.numeric(sub1$combined_income)
+
+vars <- c(
+  "Positive_Family_Environment", 
+  "Positive_School_Environment", 
+  "Percentage_HS_Diploma", 
+  "Avg_Household_Income", 
+  "Income_Disparity", 
+  "Percentage_Home_Owner", 
+  "Percentage_Unemployed", 
+  "Percentage_Below_Poverty", 
+  "Percentage_Below_138_Poverty", 
+  "Percentage_Single_Parents", 
+  "Percentage_No_Car", 
+  "Population_Density", 
+  "Right_Hippocampal_Volume", 
+  "Left_Hippocampal_Volume", 
+  "Intracranial_Volume"
+)
+
+# Check if variables are numeric
+is_numeric <- sapply(sub1[vars], is.numeric)
+
+# Print the result
+print(is_numeric)
+
+```
+
+# Change format of these variables one by one
+```{r}
+sub2 <- sub1 %>%
+  mutate(sex=as.factor(sex),
+         White_non_Hispanic = as.factor(White_non_Hispanic),
+         p_high_school = as.factor(p_high_school)
+  )
+
+str(sub2)
+
+```
+
+# Check Numeric and Factors again
+```{r}
+
+is.factor(sub2$sex)
+is.factor(sub2$White_non_Hispanic)
+is.factor(sub2$p_high_school)
+
+
+vars <- c(
+  "age","combined_income",
+  
+  "Positive_Family_Environment", 
+  "Positive_School_Environment", 
+  
+  "Percentage_HS_Diploma", 
+  "Avg_Household_Income", 
+  "Income_Disparity", 
+  "Percentage_Home_Owner", 
+  "Percentage_Unemployed", 
+  "Percentage_Below_Poverty", 
+  "Percentage_Below_138_Poverty", 
+  "Percentage_Single_Parents", 
+  "Percentage_No_Car", 
+  
+  "Right_Hippocampal_Volume", 
+  "Left_Hippocampal_Volume", 
+  "Intracranial_Volume"
+)
+
+# Check if variables are numeric
+is_numeric <- sapply(sub2[vars], is.numeric)
+
+# Print the result
+print(is_numeric)
+
+```
+# Rescale all continuous variables  put the z scored into sub2_z
+```{r}
+sub2_z <-sub2 # create a sub2_z for all z-scored continuous variables 
+sub2_z[vars] <- scale(sub2[vars], center = TRUE, scale = TRUE)
+
+summary(sub2[vars])
+summary(sub2_z[vars])
+
+```
+# Relabel categorical variables 
+```{r}
+# recreate categorical variables 
+sub2$sex <- factor(sub2$sex, levels = c(0, 1), labels = c("Female", "Male")) 
+sub2$White_non_Hispanic <- factor(sub2$White_non_Hispanic, levels = c(0, 1), labels = c("Ethno-racial Minority", "non-Hispanic White"))
+sub2$p_high_school <-factor(sub2$p_high_school, levels = c(0,1), labels = c("Parents without high school diploma", "Parents with high school diploma"))
+
+# relabel z-score abbreviations 
+sub2_z$sex <- factor(sub2_z$sex, levels = c(0, 1), labels = c("Female", "Male")) 
+sub2_z$White_non_Hispanic <- factor(sub2_z$White_non_Hispanic, levels = c(0, 1), labels = c("Min", "White"))
+sub2_z$p_high_school <-factor(sub2_z$p_high_school, levels = c(0,1), labels = c("Parents no high school", "Parents with high school diploma"))
+
+```
+
+# Histograms for all variables 
+```{r}
+# Loop through each variable to create standardized histograms
+for (variable in vars) {
+  # Create histogram using ggplot2
+  plot<-ggplot(sub2, aes_string(x = variable)) +
+    geom_histogram(fill = "skyblue", color = "black", bins = 30)
+    
+  print(plot)
+  # save each histogram to a file
+   ggsave(filename = paste(variable, ".png", sep = ""), plot = last_plot(),height = 3, width = 5)
+}
+
+```
+
+# Predictors (categorical, boxplot): Sex, White Non-Hispanic, parental high education
+## Outcome: Left Hippocampal Volume
+```{r}
+categorical_predictors<-c("sex","White_non_Hispanic","p_high_school")
+# Create boxplots for each categorical predictor against the outcome variable
+
+for (predictor in categorical_predictors) {
+  # Create boxplot
+  boxplot <- ggplot(sub2, aes_string(x = predictor, y = "Left_Hippocampal_Volume")) +
+    geom_boxplot() +
+    labs( x = predictor, y = "Left Hippocampal Volume")
+  
+  # Print boxplot
+  print(boxplot)
+  
+  # Save boxplot with smooth edges
+   ggsave(filename = paste("Left Hippocampal Volume",predictor, "_boxplot.png"), plot = boxplot ,height = 3, width = 5, dpi = 300)
+}
+```
+
+## Outcome : Right Hippocampal Volume
+```{r}
+categorical_predictors<-c("sex","White_non_Hispanic","p_high_school")
+# Create boxplots for each categorical predictor against the outcome variable
+
+for (predictor in categorical_predictors) {
+  # Create boxplot
+  boxplot <- ggplot(sub2, aes_string(x = predictor, y = "Right_Hippocampal_Volume")) +
+    geom_boxplot() +
+    labs( x = predictor, y = "Right Hippocampal Volume")
+  
+  # Print boxplot
+  print(boxplot)
+  
+  # Save boxplot with smooth edges
+   ggsave(filename = paste("Right Hippocampal Volume",predictor, "_boxplot.png"), plot = boxplot ,height = 3, width = 5, dpi = 300)
+}
+```
+
+# Pairwise comparison of continuous predictors
+```{r}
+continuous_predictors <- c("age", "combined_income", "Percentage_HS_Diploma", 
+                           "Avg_Household_Income", "Income_Disparity", 
+                           "Percentage_Home_Owner", "Percentage_Unemployed", 
+                           "Percentage_Below_Poverty", "Percentage_Below_138_Poverty",
+                           "Percentage_Single_Parents", "Percentage_No_Car", 
+                           "Positive_School_Environment", "Positive_Family_Environment","Intracranial_Volume")
+
+categorical_predictors<-c("sex","White_non_Hispanic","p_high_school")
+
+```
+
+Left and Right Hippocampal Pairwise plots (z-scored)
+# sample sub2_z 
+## ADI
+```{r}
+
+# Abbreviations for Hippocampal Volume
+sub2_z$Right_HV<-sub2_z$Right_Hippocampal_Volume
+sub2_z$Left_HV<-sub2_z$Left_Hippocampal_Volume
+ 
+   ADI<-sub2_z%>%
+  dplyr::select(Percentage_HS_Diploma, 
+                           Avg_Household_Income, Income_Disparity, 
+                           Percentage_Home_Owner, Percentage_Unemployed, 
+                           Percentage_Below_Poverty, Percentage_Below_138_Poverty,
+                           Percentage_Single_Parents, Percentage_No_Car,Left_HV, Right_HV)
+
+g = ggpairs(ADI, columns = 1:11, 
+        lower = list(
+          continuous = function(data, mapping, ...) {
+            ggplot(data = data, mapping = mapping) + 
+              geom_point(size = 0.3) + 
+              geom_smooth(method = lm, size = 0.8, level=0.95, se = TRUE, color = "royalblue", fill = "brown", verbose=FALSE) + # 95% Confidence Bands
+              theme(
+                plot.title = element_text(size = 15),  # Title size
+                axis.text = element_text(size = 12),   # Axis text size
+                axis.title = element_text(size = 14)   # Axis title size
+              )
+          }
+        ))
+          
+
+g
+#ggsave("large_pairwise_plot_ADI_HV.png", g, width = 20, height = 13, units = "in", dpi = 300)
+```
+# Demographic Characteristics 
+```{r}
+ 
+   Covariates<-sub2_z%>%
+  dplyr::select(age,combined_income,Positive_Family_Environment,Positive_School_Environment,
+                Intracranial_Volume,Right_HV,Left_HV)
+
+
+g = ggpairs(Covariates, columns = 1:7, upper = "blank",
+        lower = list(
+          continuous = function(data, mapping, ...) {
+            ggplot(data = data, mapping = mapping) + 
+              geom_point(size = 0.3) + 
+              geom_smooth(method = lm, size = 0.8, level=0.95, se = TRUE, color = "royalblue", fill = "brown", verbose=FALSE)})  # 95% Confidence Bands
+   
+        )
+
+g<-g+ggplot2::theme(
+                plot.title = element_text(size = 18),  # Title size
+                axis.text = element_text(size = 12),   # Axis text size
+                axis.title = element_text(size = 20)   # Axis title size
+              )
+
+g
+#ggsave("large_plot_covariates.png", g, width = 16, height = 10, units = "in", dpi = 300)
+```
+
+# ADI and Moderators 
+```{r}
+ 
+   ADI_mod<-sub2_z%>%
+  dplyr::select(Positive_Family_Environment,Positive_School_Environment,Percentage_HS_Diploma, 
+                           Avg_Household_Income, Income_Disparity, 
+                           Percentage_Home_Owner, Percentage_Unemployed, 
+                           Percentage_Below_Poverty, Percentage_Below_138_Poverty,
+                           Percentage_Single_Parents, Percentage_No_Car
+    )
+
+## upper scatterplots
+g = ggpairs(ADI_mod, columns = 1:11, 
+        upper = list(
+          continuous = function(data, mapping, ...) {
+            ggplot(data = data, mapping = mapping) + 
+              geom_point(size = 0.3) + 
+              geom_smooth(method = lm, size = 0.8, level=0.95, se = TRUE, color = "royalblue", fill = "brown", verbose=FALSE)}),# 95% Confidence Bands
+        lower = list(continuous="cor") 
+   
+        )
+
+g<-g+ggplot2::theme(
+                plot.title = element_text(size = 20),  # Title size
+                axis.text = element_text(size = 15),   # Axis text size
+                axis.title = element_text(size = 20)   # Axis title size
+              )
+
+g
+#ggsave("large_plot_ADI_mod.png", g, width = 20, height = 18, units = "in", dpi = 300)
+```
+
+```{r}
+## upper correlation coefficients 
+g = ggpairs(ADI_mod, columns = 1:11, 
+        
+        upper = list(continuous="cor") ,
+         lower = list(
+          continuous = function(data, mapping, ...) {
+            ggplot(data = data, mapping = mapping) + 
+              geom_point(size = 0.3) + 
+              geom_smooth(method = lm, size = 0.8, level=0.95, se = TRUE, color = "royalblue", fill = "brown", verbose=FALSE)}),# 95% Confidence Bands
+   
+        )
+
+g<-g+ggplot2::theme(
+                plot.title = element_text(size = 20),  # Title size
+                axis.text = element_text(size = 15),   # Axis text size
+                axis.title = element_text(size = 20)   # Axis title size
+              )
+
+g
+#ggsave("large_plot_ADI_mod_upper.png", g, width = 20, height = 18, units = "in", dpi = 300)
+```
+
+
+
+

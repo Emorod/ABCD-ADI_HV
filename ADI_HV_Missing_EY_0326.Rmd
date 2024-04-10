@@ -1,0 +1,346 @@
+---
+title: "ADV_HV_Missing_EY_0326"
+author: "Emerald Yuan"
+date: "2024-03-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# install packages
+```{r}
+#install.packages(GGally)
+#install.packages(ggplot2)
+#install.packages(finalfit)
+```
+
+```{r}
+pacman::p_load(
+  dplyr,
+  rio,
+  lme4,
+  lmerTest,
+  car,
+  mediation,
+  lmtest,
+  lattice,
+  irr,
+  parameters,
+  ggplot2,
+  cowplot,
+  finalfit,
+  GGally,
+  gridExtra)
+```
+
+Load dataset
+```{r}
+setwd("C:/Users/qyuan25/OneDrive - Emory University/Shared Documents - SOM Ku Lab/General/ABCD Data/ADI, HV, and Positive Family and School Environment")
+ADI_HV <- read.csv("C:/Users/qyuan25/OneDrive - Emory University/Shared Documents - SOM Ku Lab/General/ABCD Data/ADI, HV, and Positive Family and School Environment/data_11_20.csv") # N = 10114
+
+data_2_14<- read.csv("C:/Users/qyuan25/OneDrive - Emory University/Shared Documents - SOM Ku Lab/General/ABCD Data/ADI, HV, and Positive Family and School Environment/data_2_14.csv") # full dataset including missing N = 11876
+
+```
+
+# generate multirace from raw data and add on to data_2_14 --> data_2_14_2
+
+demo race 
+```{r}
+demo<-read.csv("C:/Users/qyuan25/OneDrive - Emory University/Shared Documents - SOM Ku Lab/General/ABCD Data/ADI, HV, and Positive Family and School Environment/raw data/ABCD Baseline data.csv")
+
+colnames(demo)
+
+race <- demo %>%
+  dplyr::select(src_subject_id,12:30) 
+
+str(race)
+# Assuming your data frame is named 'race'
+
+race_counts <- rowSums(dplyr::select(race,
+                              White, Black_African, American_Indian, Alaska_Native, Native_Hawaiian,
+                              Guamanian, Samoan, Other_Pacific_Islander, Asian_Indian, Chinese,
+                              Filipino, Japanese, Korean, Vietnamese, Other_Asian, Other_Race
+                              ))
+
+data <- race %>%
+  mutate(race = case_when(
+    race_counts > 1 ~ 7, ## two or more races 
+    White == 1 ~ 1, #white
+    Black_African == 1 ~ 2, #black
+    Asian_Indian == 1 | Chinese == 1 | Filipino == 1 | Japanese == 1 |
+      Korean == 1 | Vietnamese == 1 | Other_Asian == 1 ~ 3, #asian
+    
+    American_Indian == 1 | Alaska_Native == 1 ~ 4, #American Indian or Alaskan Native
+    
+    Native_Hawaiian == 1 | Guamanian == 1 | Samoan == 1 |
+      Other_Pacific_Islander == 1 ~ 5, #Native Hawaiian or Pacific islander
+  #Others, Don't know, or not to answer, or NA. 
+    TRUE ~ 6  # Don't know, not to answer or NA
+  )) %>%
+  tidyr::replace_na(list(race = 6))
+
+table(data$race)
+
+race<-data%>%
+  dplyr::select(src_subject_id,race)
+
+data_2_14_2<-left_join(data_2_14,race,by="src_subject_id")
+
+write.csv(data_2_14_2,"data_2_14_2.csv")
+
+data_2_14<-data_2_14_2
+
+```
+
+
+```{r}
+# select the variables we used for analysis 
+dataf<-data_2_14%>%
+  dplyr::select(src_subject_id,age,sex,race,Hispanic_ethnicity, White_non_Hispanic, p_edu_high,p_edu_highest,demo_comb_income_v2,reshist_addr1_adi_edu_h, reshist_addr1_adi_income, reshist_addr1_adi_in_dis, reshist_addr1_adi_home_o, reshist_addr1_adi_unemp, reshist_addr1_adi_pov, reshist_addr1_adi_b138, reshist_addr1_adi_sp, reshist_addr1_adi_ncar, reshist_addr1_popdensity, site, crpbi_y_ss_parent, rh, lh, icv, srpf_y_ss_ses)
+```
+
+```{r}
+datas<-dataf
+datas$excluded<-ifelse(dataf$src_subject_id %in% ADI_HV$src_subject_id,0,1)
+
+table(datas$excluded) # excluded 1762 
+
+```
+
+```{r}
+data<-datas
+# rename
+sub <- data %>%
+  rename(
+    Percentage_HS_Diploma = reshist_addr1_adi_edu_h,
+    Avg_Household_Income = reshist_addr1_adi_income,
+    Income_Disparity = reshist_addr1_adi_in_dis,
+    Percentage_Home_Owner = reshist_addr1_adi_home_o,
+    Percentage_Unemployed = reshist_addr1_adi_unemp,
+    Percentage_Below_Poverty = reshist_addr1_adi_pov,
+    Percentage_Below_138_Poverty = reshist_addr1_adi_b138,
+    Percentage_Single_Parents = reshist_addr1_adi_sp,
+    Percentage_No_Car = reshist_addr1_adi_ncar,
+    Population_Density = reshist_addr1_popdensity,
+    Right_Hippocampal_Volume=rh,
+    Left_Hippocampal_Volume=lh
+  )
+sub1 <- sub %>%
+  rename(
+    age = age,
+    combined_income = demo_comb_income_v2,
+    Intracranial_Volume = icv,
+    Positive_Family_Environment = crpbi_y_ss_parent,
+    Positive_School_Environment = srpf_y_ss_ses
+  )
+
+sub2<-sub1%>%
+  mutate(high_school=ifelse(p_edu_highest>=13,1,0)) # at least high school graduate
+
+
+# recreate categorical variables 
+sub2$Sex <- factor(sub2$sex, levels = c(0, 1), labels = c("Female", "Male")) # female and male 
+sub2$White_Non_Hispanic <- factor(sub2$White_non_Hispanic, levels = c(0, 1), labels = c("Minority", "White")) # minority and white non-hispanic
+sub2$Parental_High_School<-factor(sub2$high_school, levels = c(0,1), labels = c("No", "Yes"))
+categorical_predictors<-c("sex_c","White_non_Hispanic_c","high_school_c")
+ADI <- c("Percentage_HS_Diploma", 
+                           "Avg_Household_Income", "Income_Disparity", 
+                           "Percentage_Home_Owner", "Percentage_Unemployed", 
+                           "Percentage_Below_Poverty", "Percentage_Below_138_Poverty",
+                           "Percentage_Single_Parents", "Percentage_No_Car"
+                          )
+
+
+outcomes<-c("Right_Hippocampal_Volume", "Left_Hippocampal_Volume")
+
+key_missing<-c("combined_income","Right_Hippocampal_Volume", "Left_Hippocampal_Volume","Percentage_Single_Parents")
+
+demo<-c("age", "Sex","White_Non_Hispanic","Parental_High_School",
+                           "Positive_School_Environment", "Positive_Family_Environment","Intracranial_Volume")
+```
+
+```{r}
+table(sub2$combined_income,useNA="ifany") #1018 missing
+summary(sub2$Percentage_HS_Diploma,useNA="ifany") # 654 missing 
+
+sub2<-sub2%>%
+  mutate(ADI = Percentage_HS_Diploma+Avg_Household_Income+Income_Disparity+Percentage_Home_Owner +Percentage_Unemployed+
+           Percentage_Below_Poverty+Percentage_Below_138_Poverty+Percentage_Single_Parents+Percentage_No_Car)
+
+key_missing<-c("combined_income","Right_Hippocampal_Volume", "Left_Hippocampal_Volume","ADI")
+
+missing<-c("combined_income","Right_Hippocampal_Volume", "Left_Hippocampal_Volume","ADI")
+```
+
+## Comparison of Missing Values Among Demographic Variables
+```{r echo=FALSE}
+# z score all continuous variables 
+vars <- c(
+  "age","combined_income",
+  
+  "Positive_Family_Environment", 
+  "Positive_School_Environment", 
+  
+  "Percentage_HS_Diploma", 
+  "Avg_Household_Income", 
+  "Income_Disparity", 
+  "Percentage_Home_Owner", 
+  "Percentage_Unemployed", 
+  "Percentage_Below_Poverty", 
+  "Percentage_Below_138_Poverty", 
+  "Percentage_Single_Parents", 
+  "Percentage_No_Car", 
+  
+  "Right_Hippocampal_Volume", 
+  "Left_Hippocampal_Volume", 
+  "Intracranial_Volume","ADI"
+)
+sub2_z <-sub2 # create a sub2_z for all z-scored continuous variables 
+sub2_z[vars] <- scale(sub2[vars], center = TRUE, scale = TRUE)
+
+
+p<-sub2_z %>% 
+  missing_pairs(key_missing,demo)
+
+p<-p+ggplot2::theme(
+ plot.title = ggplot2::element_text(size = 15),  # Title size
+  axis.text = ggplot2::element_text(size = 9),   # Axis text size
+  axis.title = ggplot2::element_text(size = 18),   # Axis title size
+)
+
+#ggsave("Missing_demo_compare.png", p, width = 24, height = 13, units = "in", dpi = 300)
+
+
+
+```
+
+# Comparison of Missing Values Among ADIs 
+## compare if missing data in neighborhood characteristics influence right HV or Left HV
+
+```{r}
+# rename ADIs 
+
+sub3<-sub2_z%>%
+  rename(Percent_HS_Diploma = Percentage_HS_Diploma,
+    Percent_Home_Owner = Percentage_Home_Owner ,
+    Percent_Unemployed = Percentage_Unemployed,
+    Percent_Below_Poverty = Percentage_Below_Poverty,
+    Percent_Below_138_Poverty = Percentage_Below_138_Poverty,
+    Percent_Single_Parents = Percentage_Single_Parents,
+    Percent_No_Car = Percentage_No_Car,
+
+    
+    Right_HV= Right_Hippocampal_Volume,
+    Left_HV = Left_Hippocampal_Volume)
+
+
+
+missing_adi<-c("combined_income","Left_HV","Right_HV")
+
+ADI <- c("Percent_HS_Diploma", 
+                           "Avg_Household_Income", "Income_Disparity", 
+                           "Percent_Home_Owner", "Percent_Unemployed", 
+                           "Percent_Below_Poverty", "Percent_Below_138_Poverty",
+                           "Percent_Single_Parents", "Percent_No_Car"
+                          )
+
+p<-sub3 %>% 
+  missing_pairs(missing_adi, ADI)
+p<-p+ggplot2::theme(
+ plot.title = ggplot2::element_text(size = 20),  # Title size
+  axis.text = ggplot2::element_text(size = 12),   # Axis text size
+  axis.title = ggplot2::element_text(size = 20),   # Axis title size
+)
+
+# ggsave("Missing_ADI_compare.png", p, width = 20, height = 12, units = "in", dpi = 300)
+```
+
+
+# QQ plot for no missing and missing data
+```{r echo=FALSE}
+vars <- c("age","combined_income",
+  "Positive_Family_Environment", 
+  "Positive_School_Environment", 
+  "Percentage_HS_Diploma", 
+  "Avg_Household_Income", 
+  "Income_Disparity", 
+  "Percentage_Home_Owner", 
+  "Percentage_Unemployed", 
+  "Percentage_Below_Poverty", 
+  "Percentage_Below_138_Poverty", 
+  "Percentage_Single_Parents", 
+  "Percentage_No_Car", 
+  "Right_Hippocampal_Volume", 
+  "Left_Hippocampal_Volume", 
+  "Intracranial_Volume"
+)
+
+
+qq_plot_func <- function(included_data, excluded_data, var) {
+  # Extract the variable values for included and excluded datasets
+  included_var <- included_data %>% pull(var) %>% unlist()
+  excluded_var <- excluded_data %>% pull(var) %>% unlist()
+  
+  # Generate the Q-Q plot
+  qq.out <- qqplot(x = included_var, y = excluded_var, plot.it = FALSE)
+  qq.out <- as.data.frame(qq.out)
+  names(qq.out) <- c("Included", "Excluded")
+  
+  # Set the x and y limits
+  xylim <- range(c(qq.out$Included, qq.out$Excluded), na.rm = TRUE)
+  
+  # Plot the Q-Q plot
+  ggplot(qq.out, aes(x = Included, y = Excluded)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1) +
+    coord_fixed(ratio = 1, xlim = xylim, ylim = xylim) +
+    ggtitle(paste0("Empirical Q-Q Plot for ", var))+
+    theme(plot.title=element_text(size=10))
+}
+sub2_missing<-sub2_z%>%
+  filter(excluded==1)
+
+# Apply the function to each variable in the vars list
+qq_plots <- lapply(vars, function(x) qq_plot_func(sub2_z, sub2_missing, x))
+
+# Arrange QQ plots in a grid
+qq_plot_grid <- grid.arrange(grobs = qq_plots, ncol = 4)
+
+# Save the plot grid to a PDF file
+#ggsave("qq_plot_grid.pdf", qq_plot_grid, width = 20, height = 10)
+
+ggsave("qq_plot_grid.png", qq_plot_grid, width = 16, height = 14, dpi=300)
+```
+
+
+# stable 1 comparison between missing values
+```{r echo=FALSE}
+
+library(tableone)
+allvars <- c("age", "sex","race",'Hispanic_ethnicity',"White_non_Hispanic","p_edu_high","demo_comb_income_v2", "reshist_addr1_popdensity",
+             "reshist_addr1_adi_edu_h",
+             "reshist_addr1_adi_income",
+             "reshist_addr1_adi_in_dis", "reshist_addr1_adi_home_o",
+             "reshist_addr1_adi_unemp", "reshist_addr1_adi_pov",
+             "reshist_addr1_adi_b138", "reshist_addr1_adi_sp",
+             "reshist_addr1_adi_ncar","icv","lh","rh",
+             "srpf_y_ss_ses","crpbi_y_ss_parent")
+
+catvars <- c("sex","race",'Hispanic_ethnicity',"White_non_Hispanic","p_edu_high")
+non<-c("age","lh","rh","icv","reshist_addr1_adi_edu_h",
+       "reshist_addr1_adi_income",
+       "reshist_addr1_adi_in_dis",
+       "reshist_addr1_adi_home_o", "reshist_addr1_adi_unemp", "reshist_addr1_adi_pov",
+       "reshist_addr1_adi_b138","reshist_addr1_adi_sp",
+       "reshist_addr1_adi_ncar", "reshist_addr1_popdensity","srpf_y_ss_ses","demo_comb_income_v2","crpbi_y_ss_parent")
+stab2 <- CreateTableOne(vars = allvars , strata = "excluded", data = datas,factorVars = catvars)
+st1<-print(stab2,nonnormal = non, showAllLevels = FALSE, formatOptions = list(big.mark = ",", scientific = FALSE))
+```
+
+
+
+
+
+
+
